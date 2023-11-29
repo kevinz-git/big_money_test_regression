@@ -1,0 +1,238 @@
+---
+title: "What personal trait is related with wealth accumulation?"
+author: "Zhixing Zhou"
+date: '2022-12-20'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+# What Personal Trait Is Related With Wealth Accumulation?
+
+## 1. Introduction & literature review
+
+### *The personal traits' relationship with wealth accumulation*
+
+Understanding wealth accumulation's influence factor is important. The wealth management corporations can use these knowledge to advise individuals to learn, train and make better finance decisions.  The current financial planning and advising focus mainly about individual's risk-appetite, while other actions may be as well important for financial activities. (Fenton-O'Creevy & Furnham, 2022) Consequently, beside some social-economic factors, it's helpful for these advisors to understand the individual traits of people who accumulates more wealth. I will focus on two factors, financial capabilities and financial knowledge, as well as other demographical factors in its relation to personal wealth accumulation in this analysis.
+
+### *Factors influencing wealth accumulation*
+
+Past studies show that there're may be many factors influencing wealth accumulation. Social/demographical factors includes income(positive); age(positive); gender(being female is negative); education(positive) (Fenton-O'Creevy & Furnham, 2022)
+
+Personal traits also influence wealth accumulation. In a study that uses this dataset, the author analyze the dataset and find that financial capabilities of planning ahead shows the strongest positive associations, and the money attitude of seeing money as security has the strongest positive association.(Fenton-O'Creevy & Furnham, 2022)What's more, personalities of extroversion and conscientiousness is positively associated with wealth, while agreeableness is negatively associated with wealth, based on big 5 factors of personality traits.(Nabeshima & Seay, 2015)
+
+### *The dataset and relevant findings*
+
+The dataset is gathered by an social survey conducted by BBC called "Big Money Test" on 2011, the data is restored at UK Data Service. (Fenton-O'Creevy,M., Furnham, A. ,2017) There're Three essays that used this dataset. They focus on following causal relationships.
+
+One study find that the impulsive buying behavior is related with those who have not enough emotion regulation strategies.(Fenton‐O'Creevy et al., 2018) Other research shows that adverse financial outcomes is associated with financial capabilities, money attitudes and socio-economic status;(Von Stumm et al., 2013)and that there're difference by sex in money pathology( money sanity) that female exhibit more money pathology(pathological money attitudes) than males. Female score more in regarding money as love, and male score more in regarding money as power, security and freedom. (Furnham et al., 2015)
+
+## 2. Methods and Sample
+
+### *Method intended to be used in the essay*
+
+This analysis is intended to use several demographical variables and variables describing a person's financial knowledge and financial capabilities to predict a individual's potential in wealth accumulation.
+
+This analysis will be about exploratory analysis of the data. The statistical methods will include descriptive data analysis, correlation analysis, simple linear regression. Further data analysis may include multivariate regression.
+
+The graphical methods will include visualization of descriptive data analysis including scatter plot, bar plot, histogram and boxplot. Visualization of correlation includes plotting of correlation coefficients. There're also diagnostic plots for regression.
+
+### *The sample and data cleaning and wrangling process*
+
+The survey data is processed according to notes of the survey  to transform answers of questions to variables. The original data contains various dimensions of personal traits including Demographic variables, Money sanity, emotion regulation, vigilant and avoidant responses to threat, financial knowledge, behavioral inhibition, impulsive buying, adverse financial life events, financial capabilities, etc.
+
+My analysis chose some of these variables. Including the demographic variables( Age, Education, Annual Household Income, Political Orientation, Religiousness, Ethnicity, Gender ), the personal trait variables (Financial Knowledge, Financial Capabilities (including Making Ends Meet, Keeping Track, Planning Ahead, Choosing Products, Staying Informed)), and the dependent variables( Level of Minimum Saving transformed into Minimum Value of Savings). The answer to the questions were processed to attain these variables. There're 109472 observations in total. I filtered those with dependent variable ( Minimum value of Savings ) being NA. After that there're 99636 observations. I then filled NAs in other variables by using the variables' mean.
+
+The descriptive analysis of the variables are as follows.
+
+[Cleaning Data]{.underline}
+
+```{r}
+library(tidyverse)
+library(haven) # read and write statistical software dataset files
+library(corrplot) #correlation coefficient plotting
+library(car) # recoding data
+
+
+#Disable scientific notation
+options(scipen=100)
+
+#Set system language as English
+Sys.setenv(LANGUAGE="en")
+
+#Read Data
+setwd("D:/文件整理/TC - Fall Courses/HUDM 5026 Intro to Data Analysis in R/Final")
+bbc<-read_dta("bbc_big_money_test_deposited_version.dta")
+bbc<-as.data.frame(bbc)
+bbc0 <- bbc %>% mutate(across(.cols=where(is.integer), .fns=as.numeric)) 
+
+#Selecting Variables
+bbctry<- bbc0[,c("q159","wealth2","Age","q3","q6","PoliticOrient","Religiousness","FinancialKnowledge","FCMakingEndsMeet","FCKeepingTrack","FCPlanningAhead","FCChoosingProducts","FCStayingInformed","Ethnicity","female")]
+#datasets includes three parts, dependent variable, independent variable, dummy variable
+##Personal wealth: the average level of three personal wealth variables, which can only be used after levels of NA has been filtered.
+##wealth 1/2/3: the minimum value of the person's level of certain wealth. Wealth less than 0 are regarded same as 0~500.
+## We should choose wealth2, it is savings and financial investments
+#Financial Capabilities: the sum of all related questions' level.
+
+#Recoding data
+bbctry$q6<-car::recode(bbctry$q6,"1=0;2=10000;3=20000;4=30000;5=40000;6=50000;7=75000;8=150000;else=NA")
+#recode q6: the minimum of gross annual household income 
+bbctryt<- bbctry %>% mutate(FinancialCapabilities=FCMakingEndsMeet+FCKeepingTrack+FCPlanningAhead+FCStayingInformed+FCChoosingProducts) #Calculate FinancialCapabilities: add up five variables of financial capabilities
+bbctryt<- as.data.frame(bbctryt[,c(1:13,16,14:15)])
+bbctry<-bbctryt
+#ethnicity and female: categorial variables
+
+#Rename Variables
+bbctry <- bbctry %>% rename("SavingLevel"="q159","MinSavings"="wealth2","Income"="q6","Education"="q3","Gender"="female")
+
+#Check for null value
+sum(is.na(bbctry$wealth2))
+
+#Filter and Filling NAs for analysis
+na<-colSums(is.na(bbctry))
+bbctry1<- bbctry %>% filter(!is.na(MinSavings)) # filter: wealth2  level of not NA; 
+funm <- function(x) {
+  x[is.na(x)] <- mean(x, na.rm = TRUE)
+  x
+}
+bbctry2<- as.data.frame(mapply(funm,bbctry1)) # use mean to fill the NAs in Income and Age
+na2<-colSums(is.na(bbctry2))
+bbctried<- bbctry2 %>% mutate(across(.cols=1:ncol(bbctry2), .fns=as.numeric)) #mutate, turn every variable as numeric
+
+```
+
+[Descriptive Statistics]{.underline}
+
+```{r}
+# Do summary statistics for variables
+Mean<-mapply(mean,bbctry,na.rm=TRUE)
+Std.Deviation<-mapply(sd,bbctry,na.rm=TRUE)
+stat<-data.frame(Mean,Std.Deviation)
+stat<- stat %>% mutate(Var=Std.Deviation^2)
+n<- mapply(function(x){
+  sum(!is.na(x))}, bbctry) 
+stat<-cbind(stat,n)
+
+Mean<-mapply(mean,bbctried,na.rm=TRUE)
+Std.Deviation<-mapply(sd,bbctried,na.rm=TRUE)
+stat3<-data.frame(Mean,Std.Deviation)
+stat3<- stat3 %>% mutate(Var=Std.Deviation^2)
+n<- mapply(function(x){
+  sum(!is.na(x))}, bbctried) 
+stat3<-cbind(stat3,n)
+
+```
+
+Descriptive Statistics Before Filling and filtering NAs
+
+```{r}
+stat
+```
+
+Descriptive Statistics After Filling and filtering NAs
+
+```{r}
+stat3
+```
+
+## 
+
+## 3. Findings
+
+[Correlation]{.underline}
+
+```{r}
+#Correlation Between variables
+cormatrix<- bbctried %>%  cor() %>% as.data.frame()
+cormatrix
+```
+
+[Visualization of Correlation]{.underline}
+
+```{r}
+#Plotting Correlations
+corrplot(cor(bbctried),method="number")
+corrplot(cor(bbctried),method="shade")
+```
+
+[Visualization of Variables and its Relations]{.underline}
+
+```{r}
+
+#build a histogram of MinSavings to show distribution of wealth in the sample
+ggplot(data = bbctried) + 
+  geom_histogram(aes(x = c(MinSavings)),fill="lightblue")+xlab("Minimum Savings(UK Pounds)") +ylab("Number of People")+ggtitle("Levels of Minimum Savings(UK Pounds)") # MinSavings 
+
+#build a scatterplot of Minsavings and age to see their corrlelations
+ggplot(data = bbctried, mapping = aes(x=Age, y =MinSavings)) +
+  geom_point(alpha=0.4) +ylab("Levels of \nMinimum Savings(UK Pounds)")+xlab("Age(Year)") +ggtitle("Age's Relation with Wealth Accumulation ")
+
+#build a boxplot of Minsavings and age to show each groups in wealth and the average age and dispersion in age of that group of wealth. As well as their correlations.
+ggplot(data = bbctried, mapping = aes(group =MinSavings,x=Age, y = MinSavings)) +
+  geom_boxplot(width=5000,alpha=0.4,fill="lightblue") +ylab("Levels of \nMinimum Savings(UK Pounds)")+xlab("Age(Year)") +ggtitle("Age's Relation with Wealth Accumulation ")# wealth2 as age increases
+
+#Draw a Barplot to show Education's Relation with Wealth Accumulation
+ggplot(data = bbctried, mapping = aes(x = Education %>%as_factor(), group=MinSavings %>%as_factor(),fill=MinSavings %>%as_factor()))+geom_bar(stat="count",position = "fill")+scale_fill_brewer(palette="GnBu") + labs(fill = "Levels of \nMinimum Savings(UK Pounds)")+ylab("Percentage of People") + xlab("Level of Education")+scale_x_discrete(labels=c('no Olevels', 'Olevels', 'Post-16 Vocational','ALevels','Undergraduate','PostGraduate'))+ggtitle("Education's Relation with Wealth Accumulation")
+
+#boxplot of Minsavings and Financial Knowledge
+ggplot(data = bbctried, mapping = aes(group =MinSavings,x=FinancialKnowledge, y = MinSavings)) +
+  geom_boxplot(width=5000,alpha=0.4,fill="lightblue")+ylab("Levels of \nMinimum Savings(UK Pounds)")+xlab("Financial Knowledge") +ggtitle("Financial Knowledge's Relation with Wealth Accumulation ")
+
+#boxplot of Minsavings and Financial Capabilities
+ggplot(data = bbctried, mapping = aes(group =MinSavings,x=FinancialCapabilities, y = MinSavings)) +
+  geom_boxplot(width=5000,alpha=0.4,fill="lightblue")+ylab("Levels of \nMinimum Savings(UK Pounds)")+xlab("Financial Capabilities") +ggtitle("Financial Capabilities' Relation and Wealth Accumulation ")
+
+
+
+```
+
+[Regression Analysis]{.underline}
+
+```{r}
+#Conduct Regression Analysis
+
+lm1<-lm(data=bbctried,formula=MinSavings~FinancialKnowledge+log(FinancialCapabilities)+Age+Education+Income)
+summary(lm1)
+par(mfrow=c(2,2))
+plot(lm1)
+
+```
+
+## 
+
+## 4. Discussion
+
+### *Findings related to research questions*
+
+I first describe levels of minimum savings in histogram and find that people with small amount of money and large amount of money seems to be not small in the sample while the middle class is smaller.
+
+The findings show that by correlation analysis at first hand, Minimum Savings is more strongly correlated with age, education, income, financial capabilities and also financial knowledge. This finding seems to prove the former findings by other studies that age, education and income are related with wealth accumulation.The financial knowledge is correlated with the minimum savings but has small correlation. The financial capabilities is more correlated with minimum savings.
+
+Boxplots and scatterplots show that financial capabilities' relation with wealth accumulation may be not linear but more logistic, while financial knowledge show small correlation with wealth accumulation.  The age and education seem linearly related with financial accumulation.
+
+The analysis also made simple regression analysis for the data.
+
+### *Weaknesses*
+
+The analysis seems to touch the basics of variables but didn't include more other personal traits into analysis, and it may compromise the final model's explanation ability, with R-squared at 0.35. What's more, detailed investigation about the regression model should be made. 
+
+The analysis visually described the variables well, but didn't make very big contributions to existing academic literatures with exceptional conclusions.
+
+## Citation
+
+Fenton-O'Creevy, M., & Furnham, A. (2022). Money attitudes, financial capabilities, and impulsiveness as predictors of wealth accumulation. *Plos one*, *17*(11), e0278047.
+
+Fenton‐O'Creevy, M., Dibb, S., & Furnham, A. (2018). Antecedents and consequences of chronic impulsive buying: Can impulsive buying be understood as dysfunctional self‐regulation? *Psychology & Marketing*, *35*(3), 175-188.
+
+Furnham, A., Von Stumm, S., & Fenton-O'Creevy, M. (2015). Sex differences in money pathology in the general population. *Social indicators research*, *123*(3),701-711.
+
+Nabeshima, G., & Seay, M. (2015). Wealth and personality: Can personality traits make your client rich. *Journal of Financial Planning*, *28*(7), 50-57.
+
+Von Stumm, S., O'Creevy, M. F., & Furnham, A. (2013). Financial capability, money attitudes and socioeconomic status: Risks for experiencing adverse financial events. *Personality and Individual Differences*, *54*(3),344-349.
+
+Fenton-O'Creevy, M., Furnham, A. (2017). BBC Big Money Test, 2011. [data collection]. *UK Data Service*. SN: 8132, DOI: 10.5255/UKDA-SN-8132-1
