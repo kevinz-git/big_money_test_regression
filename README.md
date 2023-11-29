@@ -1,5 +1,5 @@
 # big_money_test_regression
 
 This project analyzed UK's Big Money Test survey data to understand wealth accumulation status in different age, income, education level and financial behavior. It uses regression to see the variables influencing wealth accumulation.
-![image](https://github.com/kevinz-git/Kev_Portfolio/assets/123676596/08856c3d-3cb8-497f-a0aa-d994faf3ed2a)
-![image](https://github.com/kevinz-git/Kev_Portfolio/assets/123676596/10b1ad8f-1363-4a31-af32-c862f793070d)
+![image](https://github.com/kevinz-git/big_money_test_regression/assets/123676596/816ec50c-35b8-467c-9e37-e7dad166b044)
+![image](https://github.com/kevinz-git/big_money_test_regression/assets/123676596/22b72285-5c49-42f8-a64f-431e118d1bf3)
